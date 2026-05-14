@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useForm, ValidationError } from '@formspree/react';
 import { Mail, Phone, ArrowRight, Send } from 'lucide-react';
 import { useScrollReveal } from '../hooks/useScrollReveal';
 import { useLanguage } from '../context/LanguageContext';
@@ -23,11 +23,7 @@ export default function Contact() {
   useScrollReveal();
   const { lang } = useLanguage();
   const tr = t[lang];
-  const [formData, setFormData] = useState({ name: '', email: '', car: '', message: '' });
-  const [submitted, setSubmitted] = useState(false);
-
-  const handleChange = (e) => setFormData((prev) => ({ ...prev, [e.target.name]: e.target.value }));
-  const handleSubmit = (e) => { e.preventDefault(); setSubmitted(true); };
+  const [state, handleSubmit] = useForm('mzdoqore');
 
   const contactItems = [
     { icon: <Mail size={16} className="text-primary-red" />, label: tr.contact_email_label, value: 'info@cmp-performance.lv', href: 'mailto:info@cmp-performance.lv' },
@@ -64,7 +60,7 @@ export default function Contact() {
 
             {/* Left — Form */}
             <div className="fade-up-element">
-              {submitted ? (
+              {state.succeeded ? (
                 <div role="status" aria-live="polite" className="rounded-2xl p-12 text-center h-full flex flex-col items-center justify-center"
                   style={{ background: 'linear-gradient(135deg, rgba(17,17,17,0.9) 0%, rgba(23,23,23,0.95) 100%)', border: '1px solid rgba(255,255,255,0.07)', minHeight: '420px' }}>
                   <div className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6" aria-hidden="true"
@@ -83,12 +79,13 @@ export default function Contact() {
                       </label>
                       <input
                         id={field.name} name={field.name} type={field.type} required
-                        placeholder={field.placeholder} value={formData[field.name]} onChange={handleChange}
+                        placeholder={field.placeholder}
                         className="w-full text-text-white text-sm rounded-xl px-5 py-4 outline-none transition-all duration-300 placeholder-soft-grey/40"
                         style={{ background: 'rgba(23,23,23,0.9)', border: '1px solid rgba(255,255,255,0.08)' }}
                         onFocus={(e) => { e.target.style.borderColor = 'rgba(217,31,38,0.5)'; e.target.style.boxShadow = '0 0 0 3px rgba(217,31,38,0.08)'; }}
                         onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none'; }}
                       />
+                      <ValidationError field={field.name} errors={state.errors} className="text-primary-red text-xs mt-1" />
                     </div>
                   ))}
                   <div>
@@ -98,15 +95,16 @@ export default function Contact() {
                     <textarea
                       id="message" name="message" required rows={5}
                       placeholder={tr.contact_message_placeholder}
-                      value={formData.message} onChange={handleChange}
                       className="w-full text-text-white text-sm rounded-xl px-5 py-4 outline-none transition-all duration-300 placeholder-soft-grey/40 resize-none"
                       style={{ background: 'rgba(23,23,23,0.9)', border: '1px solid rgba(255,255,255,0.08)' }}
                       onFocus={(e) => { e.target.style.borderColor = 'rgba(217,31,38,0.5)'; e.target.style.boxShadow = '0 0 0 3px rgba(217,31,38,0.08)'; }}
                       onBlur={(e) => { e.target.style.borderColor = 'rgba(255,255,255,0.08)'; e.target.style.boxShadow = 'none'; }}
                     />
+                    <ValidationError field="message" errors={state.errors} className="text-primary-red text-xs mt-1" />
                   </div>
-                  <button type="submit" className="btn-primary justify-center mt-2">
-                    {tr.contact_send} <ArrowRight size={16} aria-hidden="true" />
+                  <button type="submit" disabled={state.submitting} className="btn-primary justify-center mt-2"
+                    style={{ opacity: state.submitting ? 0.7 : 1 }}>
+                    {state.submitting ? tr.detail_sending : tr.contact_send} <ArrowRight size={16} aria-hidden="true" />
                   </button>
                 </form>
               )}

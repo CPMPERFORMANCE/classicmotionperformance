@@ -1,35 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Check, Send } from 'lucide-react';
+import { useForm, ValidationError } from '@formspree/react';
 import { getProductBySlug, urlFor } from '../lib/sanity';
 import { useLanguage } from '../context/LanguageContext';
 import t from '../lib/translations';
 
 function OrderForm({ productTitle, variantTitles, tr }) {
-  const [form, setForm] = useState({ name: '', phone: '' });
-  const [status, setStatus] = useState(null);
+  const [state, handleSubmit] = useForm('mzdoqore');
 
-  const handleChange = (e) => setForm(f => ({ ...f, [e.target.name]: e.target.value }));
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!form.name.trim() || !form.phone.trim()) return;
-    setStatus('sending');
-    try {
-      const variantsPart = variantTitles && variantTitles.length > 0
-        ? ` — ${variantTitles.join(', ')}`
-        : '';
-      const fullTitle = `${productTitle}${variantsPart}`;
-      const subject = encodeURIComponent(`Pasūtījums: ${fullTitle}`);
-      const body = encodeURIComponent(`Vārds: ${form.name}\nTālrunis: ${form.phone}\nProdukts: ${productTitle}${variantTitles && variantTitles.length > 0 ? `\nVarianti: ${variantTitles.join(', ')}` : ''}`);
-      window.location.href = `mailto:info@cmp-performance.lv?subject=${subject}&body=${body}`;
-      setStatus('sent');
-    } catch {
-      setStatus('error');
-    }
-  };
-
-  if (status === 'sent') return (
+  if (state.succeeded) return (
     <div role="status" aria-live="polite" className="flex flex-col items-center gap-4 py-8 text-center">
       <div className="w-12 h-12 rounded-full flex items-center justify-center" aria-hidden="true"
         style={{ background: 'rgba(217,31,38,0.12)', border: '1px solid rgba(217,31,38,0.3)' }}>
@@ -40,37 +20,45 @@ function OrderForm({ productTitle, variantTitles, tr }) {
     </div>
   );
 
+  const variantsPart = variantTitles && variantTitles.length > 0
+    ? variantTitles.join(', ')
+    : '—';
+
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
+      {/* Hidden fields so Formspree e-pastā iekļauj produktu un variantus */}
+      <input type="hidden" name="produkts" value={productTitle} />
+      <input type="hidden" name="varianti" value={variantsPart} />
+
       <div className="flex flex-col gap-1.5">
         <label htmlFor="order-name" className="text-soft-grey/50 text-xs uppercase tracking-widest">{tr.detail_name}</label>
-        <input id="order-name" type="text" name="name" value={form.name} onChange={handleChange}
-          placeholder="Jānis Bērziņš" required autoComplete="name"
+        <input id="order-name" type="text" name="name" required
+          placeholder="Jānis Bērziņš" autoComplete="name"
           className="w-full px-4 py-3 rounded-xl text-text-white text-sm outline-none transition-all duration-200"
           style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#F5F5F5' }}
           onFocus={e => { e.target.style.borderColor = 'rgba(217,31,38,0.5)'; e.target.style.background = 'rgba(255,255,255,0.07)'; }}
           onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.background = 'rgba(255,255,255,0.05)'; }}
         />
+        <ValidationError field="name" errors={state.errors} className="text-primary-red text-xs" />
       </div>
       <div className="flex flex-col gap-1.5">
         <label htmlFor="order-phone" className="text-soft-grey/50 text-xs uppercase tracking-widest">{tr.detail_phone}</label>
-        <input id="order-phone" type="tel" name="phone" value={form.phone} onChange={handleChange}
-          placeholder="+371 29147322" required autoComplete="tel"
+        <input id="order-phone" type="tel" name="phone" required
+          placeholder="+371 29147322" autoComplete="tel"
           className="w-full px-4 py-3 rounded-xl text-text-white text-sm outline-none transition-all duration-200"
           style={{ background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)', color: '#F5F5F5' }}
           onFocus={e => { e.target.style.borderColor = 'rgba(217,31,38,0.5)'; e.target.style.background = 'rgba(255,255,255,0.07)'; }}
           onBlur={e => { e.target.style.borderColor = 'rgba(255,255,255,0.1)'; e.target.style.background = 'rgba(255,255,255,0.05)'; }}
         />
+        <ValidationError field="phone" errors={state.errors} className="text-primary-red text-xs" />
       </div>
-      <button type="submit" disabled={status === 'sending'} className="btn-primary justify-center mt-2"
-        aria-busy={status === 'sending'}
-        style={{ opacity: status === 'sending' ? 0.7 : 1 }}>
+      <button type="submit" disabled={state.submitting} className="btn-primary justify-center mt-2"
+        aria-busy={state.submitting}
+        style={{ opacity: state.submitting ? 0.7 : 1 }}>
         <Send size={15} aria-hidden="true" />
-        {status === 'sending' ? tr.detail_sending : tr.detail_order}
+        {state.submitting ? tr.detail_sending : tr.detail_order}
       </button>
-      {status === 'error' && (
-        <p role="alert" className="text-primary-red text-xs text-center">{tr.detail_error}</p>
-      )}
+      <ValidationError errors={state.errors} className="text-primary-red text-xs text-center" />
     </form>
   );
 }
